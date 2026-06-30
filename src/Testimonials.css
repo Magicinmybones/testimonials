@@ -83,18 +83,40 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Flex spacers that center the content vertically when it's shorter than the
+   viewport (no white gap) but collapse to 0 and stay scrollable when it's taller. */
+.t-n::before,
+.t-n::after {
+  content: '';
+  flex: 1 1 0;
+}
+
 .t-n,
 .t-n * {
   box-sizing: border-box;
 }
 
-/* Fills the full viewport width (the portrait bleeds flush to the right edge via
-   its -56px right margin). Vertically centered when shorter than the viewport so
-   there's no white gap. */
+/* Fills the full viewport width — the portrait bleeds flush to the right edge via
+   its -56px right margin. */
 .t-n-inner {
   width: 100%;
-  margin: auto 0;
   padding: 72px 56px 60px;
+}
+
+/* Stats and portrait flex down on smaller narrow windows so the side-by-side top
+   row never overflows before the mobile breakpoint. */
+.t-n-stats {
+  display: flex;
+  align-items: center;
+  gap: clamp(24px, 4vw, 60px);
+}
+
+/* Sized by width to match the desktop portrait (~452px at the breakpoint) so the
+   photo stays big when the testimonials reflow below — and shrinks with the window. */
+.t-n-portrait {
+  display: block;
+  width: clamp(200px, 35vw, 520px);
+  height: auto;
 }
 
 /* ===== MOBILE LAYOUT =====

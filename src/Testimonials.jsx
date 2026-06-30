@@ -57,15 +57,15 @@ const glow = '0 0 8px rgba(238,122,24,0.45)'
 
 // Three layouts: the fixed-scale desktop comp, a "narrow" tablet layout (heading
 // beside the portrait, quotes reflowed below as a horizontal two-up row), and the
-// mobile column. The threshold is the aspect ratio at which the right-pinned
-// portrait would start overlapping the quote TEXT: text ends ~744px and the
-// portrait is 362px wide, + a ~30px gap → 1136 / 675 ≈ 1.68. Below it we switch
-// to the tablet layout (ported from "Testimonials Tablet.html"). This keeps
-// standard 16:9 (1.778) on the desktop comp.
-const DESKTOP_ASPECT = 1136 / 675
+// mobile column. On desktop the portrait is NEVER cropped — as the window narrows
+// the quote column slides left to close the gap and make room for the full photo.
+// We reflow to the tablet layout exactly when even a fully-closed gap (max slide of
+// 100px) can no longer fit the full portrait: (744 text − 100 shift + 24 gap + 362
+// portrait) / 675 ≈ 1.53. (Standard 16:9 = 1.778 sits comfortably on desktop.)
+const DESKTOP_ASPECT = 1030 / 675
 function getMode() {
   if (typeof window === 'undefined') return 'desktop'
-  if (window.matchMedia('(max-width: 820px)').matches) return 'mobile'
+  if (window.matchMedia('(max-width: 640px)').matches) return 'mobile'
   if (window.innerWidth / window.innerHeight < DESKTOP_ASPECT) return 'narrow'
   return 'desktop'
 }
@@ -73,6 +73,8 @@ function getMode() {
 export default function Testimonials() {
   const frameRef = useRef(null)
   const portraitRef = useRef(null)
+  const quotesRef = useRef(null)
+  const seamRef = useRef(null)
   const [mode, setMode] = useState(getMode)
 
   useEffect(() => {
@@ -89,11 +91,35 @@ export default function Testimonials() {
       if (frameRef.current) {
         frameRef.current.style.transform = `scale(${s})`
       }
+
+      // As the window narrows, FIRST close the gap between the left column and the
+      // quote column by sliding the quotes left (all in 1200-frame units), instead
+      // of immediately cropping the portrait. Only once the gap is fully closed
+      // (SHIFT_MAX, the point just before the quotes would touch the heading) does
+      // the portrait start to crop. Below that getMode switches to the tablet layout.
+      const QUOTE_TEXT_RIGHT = 744 // right edge of the quote text at scale 1
+      const GAP = 24 // breathing room between quotes and portrait
+      const PORTRAIT = 362 // full portrait width at scale 1
+      const SHIFT_MAX = 100 // how far the quotes can slide before reaching the heading
+      const availFrame = window.innerWidth / s // viewport width in frame units
+      const shift = Math.max(
+        0,
+        Math.min(SHIFT_MAX, QUOTE_TEXT_RIGHT + GAP + PORTRAIT - availFrame),
+      )
+      if (quotesRef.current) {
+        quotesRef.current.style.transform = `translateX(${-shift}px)`
+      }
+      if (seamRef.current) {
+        // Keep the seam between the two sections (don't let it slide under the heading).
+        seamRef.current.style.transform = `translateX(${-Math.min(shift, 60)}px)`
+      }
+
       const p = portraitRef.current
       if (p) {
-        // Desktop only renders at >= ~16:9 aspect (see getMode), so the full-width
-        // portrait always clears the quotes; narrower windows use the tablet layout.
-        p.style.width = `${362 * s}px`
+        // The portrait is NEVER cropped — it always renders at its full width. Room
+        // is made by closing the gap (above); once even a fully-closed gap can't fit
+        // the full portrait, getMode reflows to the tablet layout instead of cropping.
+        p.style.width = `${PORTRAIT * s}px`
         p.style.backgroundSize = `${cfg.imgSize * s}px auto`
         p.style.backgroundPosition = `${cfg.imgX * s}px ${cfg.imgY * s}px`
       }
@@ -130,12 +156,14 @@ export default function Testimonials() {
       >
         {/* subtle vertical seam */}
         <div
+          ref={seamRef}
           style={{
             position: 'absolute',
             left: 480,
             top: 0,
             width: 1,
             height: '100%',
+            transformOrigin: 'left top',
             background:
               'linear-gradient(180deg,rgba(160,140,120,0) 0%,rgba(160,140,120,.12) 50%,rgba(160,140,120,0) 100%)',
           }}
@@ -334,7 +362,10 @@ export default function Testimonials() {
           </span>
         </div>
 
-        {/* ===== MIDDLE COLUMN — TESTIMONIALS ===== */}
+        {/* ===== MIDDLE COLUMN — TESTIMONIALS =====
+            Wrapped in a group so it can slide left (closing the gap to the left
+            column) as the window narrows — see fit(). */}
+        <div ref={quotesRef} style={{ position: 'absolute', inset: 0, transformOrigin: 'left top' }}>
         <div
           style={{
             position: 'absolute',
@@ -421,6 +452,7 @@ export default function Testimonials() {
             CTO, Veridian
           </div>
         </div>
+        </div>
       </div>
 
       {/* ===== RIGHT — PORTRAIT (pinned to viewport edge, height-scaled) ===== */}
@@ -470,14 +502,13 @@ function TestimonialsNarrow() {
             <h1
               style={{
                 marginTop: 22,
-                fontSize: 40,
+                fontSize: 'clamp(28px, 3.9vw, 72px)',
                 lineHeight: 1.07,
                 fontWeight: cfg.wHeadline,
-                letterSpacing: '-1.6px',
+                letterSpacing: '-0.04em',
                 color: '#2c2d2f',
                 WebkitTextStroke: '0.3px #2c2d2f',
                 paintOrder: 'stroke fill',
-                whiteSpace: 'nowrap',
               }}
             >
               Real impact.
@@ -487,12 +518,12 @@ function TestimonialsNarrow() {
             <p
               style={{
                 marginTop: 24,
-                fontSize: 16,
+                fontSize: 'clamp(14px, 1.55vw, 26px)',
                 lineHeight: 1.5,
                 fontWeight: cfg.wSubtext,
                 color: '#8e8a83',
                 WebkitTextStroke: '0.35px #8e8a83',
-                width: 300,
+                maxWidth: 300,
               }}
             >
               We partner with forward-thinking teams to deliver AI products that
@@ -500,19 +531,11 @@ function TestimonialsNarrow() {
             </p>
 
             {/* stats */}
-            <div style={{ marginTop: 54, display: 'flex', alignItems: 'center', gap: 60 }}>
+            <div className="t-n-stats" style={{ marginTop: 54 }}>
               {STATS.map((stat, i) => (
                 <Fragment key={stat.label}>
                   {i > 0 && (
-                    <div
-                      style={{
-                        alignSelf: 'stretch',
-                        width: 1.2,
-                        marginLeft: 28,
-                        marginRight: -22,
-                        background: '#ddd4cf',
-                      }}
-                    />
+                    <div style={{ alignSelf: 'stretch', width: 1.2, background: '#ddd4cf' }} />
                   )}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -543,7 +566,7 @@ function TestimonialsNarrow() {
                     <div
                       style={{
                         marginTop: 28,
-                        fontSize: 52,
+                        fontSize: 'clamp(34px, 5vw, 92px)',
                         fontWeight: cfg.wStatNum,
                         letterSpacing: '-1px',
                         color: '#ee7a18',
@@ -558,7 +581,7 @@ function TestimonialsNarrow() {
                     <div
                       style={{
                         marginTop: 6,
-                        fontSize: 19,
+                        fontSize: 'clamp(15px, 1.84vw, 30px)',
                         fontWeight: cfg.wStatSub,
                         color: '#8e8a83',
                         WebkitTextStroke: '0.5px #8e8a83',
@@ -576,7 +599,7 @@ function TestimonialsNarrow() {
           {/* portrait — full figure, flush to the top-right corner (negative margins
               cancel the inner padding), no crop/rounding, as on the laptop. */}
           <div style={{ flex: '0 0 auto', alignSelf: 'flex-start', margin: '-72px -56px 0 0', display: 'flex' }}>
-            <img src={portrait} alt="" style={{ display: 'block', height: 660, width: 'auto' }} />
+            <img src={portrait} alt="" className="t-n-portrait" />
           </div>
         </div>
 
@@ -599,7 +622,7 @@ function TestimonialsNarrow() {
                 <p
                   style={{
                     marginTop: 14,
-                    fontSize: 19,
+                    fontSize: 'clamp(16px, 1.84vw, 30px)',
                     lineHeight: 1.42,
                     fontWeight: cfg.wQuote,
                     color: '#3a3a3c',
