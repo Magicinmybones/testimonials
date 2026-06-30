@@ -67,6 +67,36 @@
   font-family: 'Satoshi', -apple-system, 'Helvetica Neue', Arial, sans-serif;
 }
 
+/* ===== NARROW / TABLET LAYOUT =====
+   Port of "Testimonials Tablet.html". A scrollable column: heading + stats beside
+   the portrait on top, the two quotes side-by-side below. Used when the window is
+   too narrow for the desktop comp (see getMode in Testimonials.jsx). */
+.t-n {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #e9e4de;
+  font-family: 'Satoshi', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-overflow-scrolling: touch;
+}
+
+.t-n,
+.t-n * {
+  box-sizing: border-box;
+}
+
+/* Fills the full viewport width (the portrait bleeds flush to the right edge via
+   its -56px right margin). Vertically centered when shorter than the viewport so
+   there's no white gap. */
+.t-n-inner {
+  width: 100%;
+  margin: auto 0;
+  padding: 72px 56px 60px;
+}
+
 /* ===== MOBILE LAYOUT =====
    Port of "Testimonials Mobile.html". Only the container/architecture lives
    here; every element keeps the desktop's own inline styles (see

@@ -55,53 +55,56 @@ const cfg = {
 // Shared orange glow for all accent-colored elements (except the View-more circle).
 const glow = '0 0 8px rgba(238,122,24,0.45)'
 
+// Three layouts: the fixed-scale desktop comp, a "narrow" tablet layout (heading
+// beside the portrait, quotes reflowed below as a horizontal two-up row), and the
+// mobile column. The threshold is the aspect ratio at which the right-pinned
+// portrait would start overlapping the quote TEXT: text ends ~744px and the
+// portrait is 362px wide, + a ~30px gap → 1136 / 675 ≈ 1.68. Below it we switch
+// to the tablet layout (ported from "Testimonials Tablet.html"). This keeps
+// standard 16:9 (1.778) on the desktop comp.
+const DESKTOP_ASPECT = 1136 / 675
+function getMode() {
+  if (typeof window === 'undefined') return 'desktop'
+  if (window.matchMedia('(max-width: 820px)').matches) return 'mobile'
+  if (window.innerWidth / window.innerHeight < DESKTOP_ASPECT) return 'narrow'
+  return 'desktop'
+}
+
 export default function Testimonials() {
   const frameRef = useRef(null)
   const portraitRef = useRef(null)
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 820px)').matches,
-  )
+  const [mode, setMode] = useState(getMode)
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 820px)')
-    const onChange = (e) => setIsMobile(e.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
+    const onResize = () => setMode(getMode())
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
   }, [])
 
   useEffect(() => {
     const fit = () => {
-      // Scale by height (the design's native sizing) but also cap by width so the
-      // right-pinned portrait can never slide left over the quote column. The quote
-      // column ends near 861px and the portrait is 362px wide at scale 1, so ~1280px
-      // of horizontal room keeps a comfortable gap between them.
-      const s = Math.min(window.innerHeight / 675, window.innerWidth / 1280)
+      // Scale by height so the 675px-tall composition always fills the viewport
+      // vertically — no whitespace at the bottom regardless of window size.
+      const s = window.innerHeight / 675
       if (frameRef.current) {
         frameRef.current.style.transform = `scale(${s})`
       }
       const p = portraitRef.current
       if (p) {
-        // The portrait is pinned to the right viewport edge. Cap its width to the
-        // space left after the quote column (which ends ~861px at scale 1) so it can
-        // never cover the quotes. When there's room it keeps its full 362px width.
-        const quoteRight = 861 * s
-        const gap = 28 * s
-        const maxW = 362 * s
-        const w = Math.max(Math.min(maxW, window.innerWidth - quoteRight - gap), 200 * s)
-        p.style.width = `${w}px`
+        // Desktop only renders at >= ~16:9 aspect (see getMode), so the full-width
+        // portrait always clears the quotes; narrower windows use the tablet layout.
+        p.style.width = `${362 * s}px`
         p.style.backgroundSize = `${cfg.imgSize * s}px auto`
-        // Anchor the image to the right edge so cropping (when narrowed) trims the
-        // left side and keeps the subject visible. At full width this matches the
-        // design's original -29px left offset (362 - 390 ≈ -28).
-        p.style.backgroundPosition = `right ${cfg.imgY * s}px`
+        p.style.backgroundPosition = `${cfg.imgX * s}px ${cfg.imgY * s}px`
       }
     }
     window.addEventListener('resize', fit)
     fit()
     return () => window.removeEventListener('resize', fit)
-  }, [isMobile])
+  }, [mode])
 
-  if (isMobile) return <TestimonialsMobile />
+  if (mode === 'mobile') return <TestimonialsMobile />
+  if (mode === 'narrow') return <TestimonialsNarrow />
 
   return (
     <div className="testimonials-root">
@@ -435,6 +438,223 @@ export default function Testimonials() {
           backgroundPosition: `${cfg.imgX}px ${cfg.imgY}px`,
         }}
       />
+    </div>
+  )
+}
+
+// ===== NARROW / TABLET LAYOUT =====
+// Direct port of "Testimonials Tablet.html" (Claude Design export). Used when the
+// window is too narrow for the side-by-side desktop comp (aspect < ~16:9), where
+// the portrait would otherwise overlap the quotes. The heading + stats sit beside
+// the portrait at the top; the testimonials drop below as a horizontal two-up row.
+// Same element styles as the desktop/mobile so the look never drifts.
+function TestimonialsNarrow() {
+  return (
+    <div className="t-n">
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <filter id="quote-recolor-t" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+            <feFlood floodColor="#d0c1ba" result="color" />
+            <feComposite in="color" in2="SourceGraphic" operator="in" />
+          </filter>
+        </defs>
+      </svg>
+
+      <div className="t-n-inner">
+        {/* TOP ROW: heading + stats (left), portrait flush to the top-right (right) */}
+        <div style={{ display: 'flex', gap: 36, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 7, fontWeight: cfg.wEyebrow, letterSpacing: 2.5, color: '#ee7a18' }}>
+              TESTIMONIALS&nbsp;&nbsp;/&nbsp;&nbsp;RESULTS
+            </div>
+            <h1
+              style={{
+                marginTop: 22,
+                fontSize: 40,
+                lineHeight: 1.07,
+                fontWeight: cfg.wHeadline,
+                letterSpacing: '-1.6px',
+                color: '#2c2d2f',
+                WebkitTextStroke: '0.3px #2c2d2f',
+                paintOrder: 'stroke fill',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Real impact.
+              <br />
+              Trusted by builders.
+            </h1>
+            <p
+              style={{
+                marginTop: 24,
+                fontSize: 16,
+                lineHeight: 1.5,
+                fontWeight: cfg.wSubtext,
+                color: '#8e8a83',
+                WebkitTextStroke: '0.35px #8e8a83',
+                width: 300,
+              }}
+            >
+              We partner with forward-thinking teams to deliver AI products that
+              perform.
+            </p>
+
+            {/* stats */}
+            <div style={{ marginTop: 54, display: 'flex', alignItems: 'center', gap: 60 }}>
+              {STATS.map((stat, i) => (
+                <Fragment key={stat.label}>
+                  {i > 0 && (
+                    <div
+                      style={{
+                        alignSelf: 'stretch',
+                        width: 1.2,
+                        marginLeft: 28,
+                        marginRight: -22,
+                        background: '#ddd4cf',
+                      }}
+                    />
+                  )}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: '#ee7a18',
+                          display: 'inline-block',
+                          boxShadow: glow,
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: cfg.wStatLabel,
+                          letterSpacing: 1.5,
+                          color: '#635e58',
+                          WebkitTextStroke: '0.3px #635e58',
+                          paintOrder: 'stroke fill',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {stat.label}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 28,
+                        fontSize: 52,
+                        fontWeight: cfg.wStatNum,
+                        letterSpacing: '-1px',
+                        color: '#ee7a18',
+                        textShadow: glow,
+                        WebkitTextStroke: '0.5px #ee7a18',
+                        fontFamily:
+                          "'Avenir Next Cyr', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif",
+                      }}
+                    >
+                      {stat.num}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: 19,
+                        fontWeight: cfg.wStatSub,
+                        color: '#8e8a83',
+                        WebkitTextStroke: '0.5px #8e8a83',
+                        paintOrder: 'stroke fill',
+                      }}
+                    >
+                      {stat.sub}
+                    </div>
+                  </div>
+                </Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* portrait — full figure, flush to the top-right corner (negative margins
+              cancel the inner padding), no crop/rounding, as on the laptop. */}
+          <div style={{ flex: '0 0 auto', alignSelf: 'flex-start', margin: '-72px -56px 0 0', display: 'flex' }}>
+            <img src={portrait} alt="" style={{ display: 'block', height: 660, width: 'auto' }} />
+          </div>
+        </div>
+
+        {/* divider */}
+        <div style={{ marginTop: 52, width: '100%', height: 1, background: 'rgba(120,105,90,.22)' }} />
+
+        {/* TESTIMONIALS ROW: two quotes side by side, below the content */}
+        <div style={{ marginTop: 44, display: 'flex', gap: 48, alignItems: 'flex-start' }}>
+          {QUOTES.map((q, i) => (
+            <Fragment key={q.name}>
+              {i > 0 && (
+                <div style={{ alignSelf: 'stretch', width: 1, background: 'rgba(120,105,90,.22)' }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <img
+                  src={quoteIcon}
+                  alt=""
+                  style={{ width: 56, height: 'auto', filter: 'url(#quote-recolor-t)', marginLeft: -10 }}
+                />
+                <p
+                  style={{
+                    marginTop: 14,
+                    fontSize: 19,
+                    lineHeight: 1.42,
+                    fontWeight: cfg.wQuote,
+                    color: '#3a3a3c',
+                    maxWidth: 300,
+                  }}
+                >
+                  {q.text}
+                </p>
+                <div style={{ marginTop: 22, width: 18, height: 2, background: '#ee7a18', boxShadow: glow }} />
+                <div style={{ marginTop: 18, fontSize: 15, fontWeight: cfg.wName, color: '#2f2f31' }}>
+                  {q.name}
+                </div>
+                <div style={{ marginTop: 4, fontSize: 14, fontWeight: cfg.wRole, color: '#9a958d' }}>
+                  {q.role}
+                </div>
+              </div>
+            </Fragment>
+          ))}
+        </div>
+
+        {/* view more */}
+        <div style={{ marginTop: 52, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: '50%',
+              background: '#ee7a18',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M4 12L12 4M12 4H5.5M12 4V10.5"
+                stroke="#fff"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: cfg.wViewMore,
+              color: '#3a3a3c',
+              WebkitTextStroke: '0.55px #3a3a3c',
+            }}
+          >
+            View more case studies
+          </span>
+        </div>
+      </div>
     </div>
   )
 }
