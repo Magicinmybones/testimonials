@@ -494,7 +494,7 @@ function TestimonialsNarrow() {
 
       <div className="t-n-inner">
         {/* TOP ROW: heading + stats (left), portrait flush to the top-right (right) */}
-        <div style={{ display: 'flex', gap: 36, alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: 'clamp(16px, 2vw, 40px)', alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 7, fontWeight: cfg.wEyebrow, letterSpacing: 2.5, color: '#ee7a18' }}>
               TESTIMONIALS&nbsp;&nbsp;/&nbsp;&nbsp;RESULTS
@@ -523,7 +523,9 @@ function TestimonialsNarrow() {
                 fontWeight: cfg.wSubtext,
                 color: '#8e8a83',
                 WebkitTextStroke: '0.35px #8e8a83',
-                maxWidth: 300,
+                // Track under the headline width (which scales at ~3.9vw) so the
+                // subtitle never wraps wider than the title.
+                maxWidth: 'clamp(220px, 30vw, 440px)',
               }}
             >
               We partner with forward-thinking teams to deliver AI products that

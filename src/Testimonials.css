@@ -111,11 +111,11 @@
   gap: clamp(24px, 4vw, 60px);
 }
 
-/* Sized by width to match the desktop portrait (~452px at the breakpoint) so the
-   photo stays big when the testimonials reflow below — and shrinks with the window. */
+/* Flush to the right edge, sized to roughly match the desktop portrait so it stays
+   continuous across the breakpoint and never dominates. Shrinks with the window. */
 .t-n-portrait {
   display: block;
-  width: clamp(200px, 35vw, 520px);
+  width: clamp(280px, 38vw, 560px);
   height: auto;
 }
 
