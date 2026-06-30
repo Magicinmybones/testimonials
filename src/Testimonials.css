@@ -66,3 +66,31 @@
   background: #e9e4de;
   font-family: 'Satoshi', -apple-system, 'Helvetica Neue', Arial, sans-serif;
 }
+
+/* ===== MOBILE LAYOUT =====
+   Port of "Testimonials Mobile.html". Only the container/architecture lives
+   here; every element keeps the desktop's own inline styles (see
+   TestimonialsMobile in Testimonials.jsx). Natural top-to-bottom flow in a
+   phone-width column — no scaling. */
+.t-m {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #e9e4de;
+  font-family: 'Satoshi', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.t-m,
+.t-m * {
+  box-sizing: border-box;
+}
+
+.t-m-screen {
+  max-width: 412px;
+  margin: 0 auto;
+  padding: 52px 24px calc(48px + env(safe-area-inset-bottom, 0px));
+}
