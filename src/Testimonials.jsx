@@ -71,15 +71,29 @@ export default function Testimonials() {
 
   useEffect(() => {
     const fit = () => {
-      const s = window.innerHeight / 675
+      // Scale by height (the design's native sizing) but also cap by width so the
+      // right-pinned portrait can never slide left over the quote column. The quote
+      // column ends near 861px and the portrait is 362px wide at scale 1, so ~1280px
+      // of horizontal room keeps a comfortable gap between them.
+      const s = Math.min(window.innerHeight / 675, window.innerWidth / 1280)
       if (frameRef.current) {
         frameRef.current.style.transform = `scale(${s})`
       }
       const p = portraitRef.current
       if (p) {
-        p.style.width = `${362 * s}px`
+        // The portrait is pinned to the right viewport edge. Cap its width to the
+        // space left after the quote column (which ends ~861px at scale 1) so it can
+        // never cover the quotes. When there's room it keeps its full 362px width.
+        const quoteRight = 861 * s
+        const gap = 28 * s
+        const maxW = 362 * s
+        const w = Math.max(Math.min(maxW, window.innerWidth - quoteRight - gap), 200 * s)
+        p.style.width = `${w}px`
         p.style.backgroundSize = `${cfg.imgSize * s}px auto`
-        p.style.backgroundPosition = `${cfg.imgX * s}px ${cfg.imgY * s}px`
+        // Anchor the image to the right edge so cropping (when narrowed) trims the
+        // left side and keeps the subject visible. At full width this matches the
+        // design's original -29px left offset (362 - 390 ≈ -28).
+        p.style.backgroundPosition = `right ${cfg.imgY * s}px`
       }
     }
     window.addEventListener('resize', fit)
